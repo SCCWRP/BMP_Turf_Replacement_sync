@@ -6,6 +6,8 @@ from shareplum.site import Version
 
 import pandas as pd
 
+from functions import csv_to_db
+
 username = os.environ.get('MS_USERNAME')
 pw = os.environ.get('MS_PASSWORD')
 url = os.environ.get('TEAMS_URL')
@@ -118,12 +120,25 @@ for file_ in folder.files:
 
     print(df)
     print(df[~pd.isnull(df.result)])
+    
 
     alldata = pd.concat(
         [alldata, df],
         ignore_index = True
     )
 
+# throw the data in the tmp folder
+tmpcsvpath = '/tmp/tmpwatervolume.csv'
+alldata.to_csv(tmpcsvpath, index = False, header = False)
+
+tblname = 'tbl_testwatervolume'
+print(f"Loading data to {tblname}")
+exitcode = csv_to_db(os.environ.get("DB_HOST"), os.environ.get("DB_NAME"), os.environ.get("DB_USER"), tblname, alldata.columns, tmpcsvpath)
+print(f"Exit code {exitcode}")
+
+
+# remove the clutter from tmp folder
+os.remove(tmpcsvpath)
 
 #print(alldata)
 

@@ -16,14 +16,6 @@ RUN pip3 install Office365-REST-Python-Client
 RUN pip3 install shareplum
 RUN pip3 install asttokens executing
 
-# Try to install postgres for the sake of using the psql copy command
-# we are most likely going to be moving large amounts of data
-#RUN apt-get update
-RUN apt-get install wget lsb-core
-RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
-RUN apt-get -y install postgresql
-
 
 RUN mkdir -p /var/www/sync/
 WORKDIR /var/www/sync/

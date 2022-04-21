@@ -119,3 +119,19 @@ def send_mail(send_from, send_to, subject, text, filename=None, server="localhos
     smtp = smtplib.SMTP(server)
     smtp.sendmail(send_from, send_to, msg.as_string())
     smtp.close()
+
+
+def csv_to_db(DB_HOST, DB_NAME, DB_USER, tablename, columns, csvpath):
+    # This will ensure the data is copied with correct corresponding columns
+    # psql can execute since it authenticates with PGPASSWORD environment variable
+    sqlcmd = (
+        f'psql -h {DB_HOST} -d {DB_NAME} -U {DB_USER} -c "\copy {tablename} ({",".join(columns)}) FROM \'{csvpath}\' csv\"'
+    )
+    print(sqlcmd)
+    
+    # At least we can catch if it failed, and which datatype was the one that failed, which is a start
+    # we can email if the exitcode is non zero and include which datatype failed
+    # TODO capture some kind of error message (That's probably a low priority as it)
+    code = os.system(sqlcmd)
+    return code
+

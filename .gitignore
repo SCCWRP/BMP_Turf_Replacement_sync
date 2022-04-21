@@ -2,4 +2,5 @@
 testing/
 ignore/
 __pycache__/
+stagingupload/
 docker/deploy.sh
