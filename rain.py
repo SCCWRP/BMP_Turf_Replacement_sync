@@ -55,6 +55,7 @@ def sync_rain(SITENAME, START_DATE, eng):
         )
 
         rain = rain.sort_values('reading')
+        rain = rain[pd.to_datetime(rain['reading'])>START_DATE]
 
         try:
             print(f"Here are the records from {start} to {end}")
