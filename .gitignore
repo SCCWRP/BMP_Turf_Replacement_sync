@@ -1,0 +1,5 @@
+.env
+testing/
+ignore/
+__pycache__/
+docker/deploy.sh
