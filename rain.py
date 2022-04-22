@@ -38,6 +38,10 @@ def sync_rain(SITENAME, START_DATE, eng):
 
     n = 0
 
+    print((START_DATE + timedelta(days = 59 * n)).date())
+    print(START_DATE)
+    print(TODAY.date() - timedelta(days=1))
+
     # Start date should be the max of the base start date specified at the top of the script, and the latest date in the table
     # pull records from that start date up until yesterday's date, otherwise we'll get a primary key violation every time
     # Plus we can think of it as waiting for the entire day to complete before pulling rain data for that date
@@ -68,6 +72,8 @@ def sync_rain(SITENAME, START_DATE, eng):
         # Here goes nothing
         try:
             print("Loading records to tbl_rain")
+            # The if_exists argument in to_sql indicates how to behave if the table already exists 
+            # 'fail'-> raise ValueError, 'replace'->drop table before insering new values,'append' (self explanatory)
             rain.to_sql('tbl_rain', eng, index = False, if_exists = 'append')
             print(f"{len(rain)} records of data loaded successfully to tbl_rain")
         except Exception as e:
@@ -75,7 +81,8 @@ def sync_rain(SITENAME, START_DATE, eng):
             # It would be a shame for the whole script to die because it couldnt execute a print statement
             print(f"Could not load the records due to an unexpected error.\n{e}")
         
-        # if this next line gets deleted or commented out, we'll be stuck in an infinite loop, or at least a 10 minute loop provided the below code remains
+        # if this next line gets deleted or commented out, we'll be stuck in an infinite loop, 
+        # or at least a 10 minute loop provided the below code remains
         n += 1 
 
         if (pd.Timestamp(time.time(), unit = 's') - TODAY).total_seconds() > 600:

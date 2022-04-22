@@ -3,6 +3,7 @@ from io import StringIO, BytesIO
 from shareplum import Site
 from shareplum import Office365
 from shareplum.site import Version
+import sys
 
 import pandas as pd
 
@@ -29,6 +30,7 @@ for file_ in folder.files:
     filename = file_.get('Name')
     print(filename)
     
+    # If data type is not dat or csv, continue.
     if filename.split('.')[-1] not in ('dat','csv'):
         continue
     
@@ -48,6 +50,7 @@ for file_ in folder.files:
         df = pd.read_csv(f, na_values = MISSING_DATA_VALUES)
         assert len(df.columns) > 1, "Only one column found. It is likely that the file is not comma delimited but rather tab delimited"
     
+    # if line 49 raises an error, the csv is not comma separated and it is possibly tab separated. 
     except AssertionError as e:
         print(e)
         try:
@@ -73,27 +76,33 @@ for file_ in folder.files:
     df = df.drop(1, axis = 'rows')
 
     # What this will do is essentially combine that first row into the column headers. We will then need to drop that first row of the dataframe
+    # grabs first row and makes cx2 array then renames columns as index n unit, then creates series with tuples.
     df.columns = [
         f"{c}_{unit}" for c, unit in df.iloc[0].reset_index(name = 'unit').apply(lambda row: (row['index'], row['unit']), axis = 1)
     ]
-    print(df)
 
     # Drop that first row with unit names which corrupts each column's datatype
     df.drop(0, axis = 'rows', inplace = True)
-
     # make the dataframe a json string and read it back in to let pandas automatically correct the corrupted datatypes
+    # ask rob later
     df = pd.read_json(StringIO(json.dumps(df.to_dict('records'))))
 
     print(df)
     print(df.dtypes)
 
     # clean up the column names
+    # First lower case namesa and replace '^' with ''. Then replace space... with underscore.
+    # WHY DIDNT HE REPLACE TWICE? WHY RE.SUB?
     df.columns = [re.sub('\s+','_', c.strip().lower().replace('^','')) for c in df.columns]
 
     # columns have now been lowercased
     df.rename(columns = {'timestamp_ts': 'timestamp'}, inplace = True)
 
     # get rid of unneccesary columns
+    # this iterative notation comes up again
+    # [f(iter) FOR iter IN list] evaluates f on iter as it iterates through list and puts into a list
+    # Here, f is the identity function and instead include an if statement at the end that saves
+    # iter in the new list if the current entry meets the condition.
     dropcols = [
         c for c in df.columns if not ( c == 'timestamp' or 'm3/m3' in c )
     ]
@@ -104,6 +113,7 @@ for file_ in folder.files:
 
     # Take the unit to be everything after the underscore, if an underscore is in the column name (which it should always be, but we cant be too safe. Assumptions are dangerous)
     # Otherwise put the unit value as nothing
+    # rsplit begins search from the right and arg after is number of splits.
     df['unit'] = df.sensor.apply(lambda x: str(x).rsplit('_', 1)[-1] if str(x).count('_') > 0 else None)
 
     # in the sensor column, get rid of the unit value
@@ -116,12 +126,14 @@ for file_ in folder.files:
         'origin_filename': filename.rsplit('.',1)[0]
     }
     df[list(metadatacols.keys())] = pd.Series(list(metadatacols.values()))
+    # The order of the columns are determined before "building" the reorderd dataframe then saving into 'df'
+    # * unwraps each inner list and puts it into an outer list. The outer list is the input within the brackets to indicate which order we want the columns.
     df = df[ [ *list(metadatacols.keys()), *[c for c in df.columns if c not in ('origin_filename', 'origin_foldername', 'origin_sharepointsite') ] ] ]
 
     print(df)
     print(df[~pd.isnull(df.result)])
     
-
+    # stacks clean data from each file. we ignore index because the columns are ordered already
     alldata = pd.concat(
         [alldata, df],
         ignore_index = True
