@@ -29,7 +29,7 @@ for file_ in folder.files:
     filename = file_.get('Name')
     print(filename)
     
-    if filename.split('.')[-1] not in ('dat','csv'):
+    if filename.split('.')[-1] not in ('csv'):
         continue
     
     data = folder.get_file(filename)
