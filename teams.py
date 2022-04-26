@@ -31,7 +31,7 @@ for file_ in folder.files:
     print(filename)
     
     # If data type is not dat or csv, continue.
-    if filename.split('.')[-1] not in ('dat','csv'):
+    if filename.split('.')[-1] not in ('csv'):
         continue
     
     data = folder.get_file(filename)
