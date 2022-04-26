@@ -143,7 +143,7 @@ for file_ in folder.files:
 tmpcsvpath = '/tmp/tmpwatervolume.csv'
 alldata.to_csv(tmpcsvpath, index = False, header = False)
 
-tblname = 'tbl_testwatervolume'
+tblname = 'tbl_watervolume'
 print(f"Loading data to {tblname}")
 exitcode = csv_to_db(os.environ.get("DB_HOST"), os.environ.get("DB_NAME"), os.environ.get("DB_USER"), tblname, alldata.columns, tmpcsvpath)
 print(f"Exit code {exitcode}")
