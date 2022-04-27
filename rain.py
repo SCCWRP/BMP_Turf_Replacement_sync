@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os, time
 
-from functions import fetch_raindata, check_date_arg
+from functions import fetch_raindata, check_date_arg, exception_handler
 
-
+@exception_handler
 def sync_rain(SITENAME, START_DATE, eng):
     # msgs is what we will return for final report to email
     msgs = []

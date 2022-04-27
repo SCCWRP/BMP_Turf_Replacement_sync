@@ -121,10 +121,12 @@ def send_mail(send_from, send_to, subject, text, filename=None, server="localhos
     smtp.close()
 
 
-def csv_to_db(DB_HOST, DB_NAME, DB_USER, tablename, columns, csvpath):
+def csv_to_db(DB_HOST, DB_NAME, DB_USER, tablename, columns, csvpath, overwrite = False):
     # This will ensure the data is copied with correct corresponding columns
     # psql can execute since it authenticates with PGPASSWORD environment variable
-    sqlcmd = (
+    sqlcmd = f'psql -h {DB_HOST} -d {DB_NAME} -U {DB_USER} -c "DELETE FROM {tablename}";' if overwrite else ''
+
+    sqlcmd += (
         f'psql -h {DB_HOST} -d {DB_NAME} -U {DB_USER} -c "\copy {tablename} ({",".join(columns)}) FROM \'{csvpath}\' csv\"'
     )
     print(sqlcmd)
@@ -135,3 +137,11 @@ def csv_to_db(DB_HOST, DB_NAME, DB_USER, tablename, columns, csvpath):
     code = os.system(sqlcmd)
     return code
 
+
+def exception_handler(func):
+    def callback(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return [f'Unexpected error in {func.__name__}:\nArguments: {args}\n{str(e)[:1000]}']
+    return callback

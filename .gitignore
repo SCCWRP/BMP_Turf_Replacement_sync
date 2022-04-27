@@ -4,3 +4,6 @@ ignore/
 __pycache__/
 stagingupload/
 docker/deploy.sh
+graphtoken.json
+tokens.py
+download/

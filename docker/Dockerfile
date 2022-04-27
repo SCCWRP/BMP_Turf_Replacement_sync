@@ -15,6 +15,7 @@ RUN pip3 install msal
 RUN pip3 install Office365-REST-Python-Client
 RUN pip3 install shareplum
 RUN pip3 install asttokens executing
+RUN pip3 install wget
 
 
 RUN mkdir -p /var/www/sync/
