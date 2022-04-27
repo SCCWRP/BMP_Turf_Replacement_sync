@@ -9,7 +9,7 @@ import pandas as pd
 from functions import csv_to_db, exception_handler
 
 @exception_handler
-def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_file_extensions = ('csv','dat')):
+def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_file_extensions = ('dat')):
 
     # initialize report
     report = []
