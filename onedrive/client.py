@@ -78,13 +78,15 @@ class OneDriveClient:
         return contents.get('value')
 
     def get_download_links(self, email, folderpath, file_ext = '*'):
-        '''Doenst work recursively at this time, since theres no need to develop it in such a way at the moment'''
+        '''Doesnt work recursively at this time, since theres no need to develop it in such a way at the moment'''
         assert isinstance(file_ext, (list, tuple, str)), "file_ext argument must be a list, tuple or string"
         if isinstance(file_ext, str):
             file_ext = [file_ext]
         
         assert len(file_ext) > 0, "file extension argument is empty"
 
+        # shouldnt have the periods in there
+        file_ext = [s.replace('.','') for s in file_ext]
 
         links = [
             l for l in self.list_folder_contents(email, folderpath)
@@ -116,9 +118,3 @@ class OneDriveClient:
 
 
 
-
-client = OneDriveClient( os.environ.get('SCCWRP_TENANT_ID'),os.environ.get('ONEDRIVE_CLIENT_ID'), os.environ.get('ONEDRIVE_CLIENT_SECRET') )
-
-folderpath = 'Rancho San Diego Turf Data/Data Logger Files'
-
-data = client.download_folder('elizabethfb@sccwrp.org',folderpath, file_ext = ('dat','csv'), dest_folder = os.path.join(os.getcwd(), 'download'))
