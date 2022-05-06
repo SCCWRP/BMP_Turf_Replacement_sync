@@ -86,13 +86,14 @@ def fetch_raindata(
     return rain
 
 # Accepts `gis` engine and pulls the first table from survey with ID:`surv_key` from the Survey123 website. 
-def fetch_survey123data(surv_name, surv_key, gis):
+def fetch_survey123data(gis, surv_name, surv_key, cols):
     print(f"Accessing item: {surv_key}")
     collection = gis.content.get(surv_key)
     tables = collection.tables
     print('Pulling the main table called repeat_a')
     df = tables[0].query().sdf # We have only one layer for each 'main'
     df.columns = list(map(str.lower, df.columns))
+    df = df[cols]
     print("survey_df")
     print(df)
     return df
