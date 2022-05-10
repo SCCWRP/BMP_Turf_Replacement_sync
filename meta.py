@@ -35,6 +35,7 @@ def sync_metadata(username, password, url, teamname, sitefolder, filename, table
 
     fileIO = BytesIO(folder.get_file(filename))
     data = pd.read_excel(fileIO, skiprows=[0], na_values=MISSING_DATA_VALUES)
+    eng.execute(f"DROP TABLE IF EXISTS {tablename} CASCADE;")
     data.to_sql(tablename, eng, if_exists = 'replace', index = False)
 
     report.append(f"\tTable {tablename} created successfully from the file {filename} in {os.path.join(url, 'sites', teamname, sitefolder)}")
