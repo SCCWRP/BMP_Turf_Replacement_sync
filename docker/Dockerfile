@@ -1,4 +1,4 @@
-# sccwrp/python:sdturfsync
+# docker image build -t sccwrp/python:sdturfsync-psql .
 #FROM debian:latest
 FROM postgres:latest
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,10 @@ RUN pip3 install Office365-REST-Python-Client
 RUN pip3 install shareplum
 RUN pip3 install asttokens executing
 RUN pip3 install wget
-
+RUN apt-get install -y libkrb5-dev
+RUN apt-get install -y libjpeg62-turbo-dev zlib1g-dev
+RUN pip3 install Pillow==6.2.2
+RUN pip3 install arcgis
 
 RUN mkdir -p /var/www/sync/
 WORKDIR /var/www/sync/
