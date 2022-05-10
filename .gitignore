@@ -7,3 +7,4 @@ docker/deploy.sh
 graphtoken.json
 tokens.py
 download/
+test.py
