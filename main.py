@@ -37,6 +37,17 @@ print("Logged in as " + str(gis.properties.user.username))
 # initialize report
 report = []
 
+tables = {
+    "tbl_controltest" : {
+        "cols": ['station','timeirrigationon','timeirrigationoff'],
+        "surveys": {
+            "SDturf_FieldForm_v1": "08e20b9f48b84662b55de474b950b958",
+            "SDturf_FieldForm_v2": "f31c0f02127647c5888c34bc32f017d3"
+        }
+    }
+}
+
+
 
 # sync rain data from February 2022 and later
 report = [
