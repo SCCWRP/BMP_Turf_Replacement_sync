@@ -146,9 +146,9 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
             [alldata, df],
             ignore_index = True
         )
-        print(f"{len(all_data)} water volume records before dropping duplicates")
-        all_data = all_data.drop_duplicates()
-        print(f"{len(all_data)} water volume records after dropping duplicates")
+        print(f"{len(alldata)} water volume records before dropping duplicates")
+        alldata = alldata.drop_duplicates(subset = ['timestamp','sensor'], keep = 'first')
+        print(f"{len(alldata)} water volume records after dropping duplicates")
 
     # throw the data in the tmp folder
     tmpcsvpath = '/tmp/tmpwatervolume.csv'

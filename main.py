@@ -7,7 +7,7 @@ from functions import send_mail
 from watervolume import sync_watervolume
 from meta import sync_metadata
 from survey123 import sync_survey123_multiple
-#from views import create_views
+from views import create_views
 
 from arcgis.gis import GIS
 
@@ -32,8 +32,6 @@ print("Logged in as " + str(gis.properties.user.username))
 ##################
 
 
-
-
 # initialize report
 report = []
 
@@ -42,7 +40,7 @@ tables = {
         "cols": ['station','timeirrigationon','timeirrigationoff'],
         "surveys": {
             "SDturf_FieldForm_v1": "08e20b9f48b84662b55de474b950b958",
-            "SDturf_FieldForm_v2": "f31c0f02127647c5888c34bc32f017d3"
+            #"SDturf_FieldForm_v2": "f31c0f02127647c5888c34bc32f017d3"
         }
     }
 }
@@ -90,8 +88,8 @@ report = [
         teamname = 'SanDiegoCountyBMPMonitoring',
         sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Raw'
     ),
-    #*create_views(eng)
-    sync_survey123_multiple(eng, gis, tables)
+    *sync_survey123_multiple(eng, gis, tables),
+    *create_views(eng)
 ]
 
 SEND_FROM = 'admin@checker.sccwrp.org'
