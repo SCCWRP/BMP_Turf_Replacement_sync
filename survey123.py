@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from sqlalchemy import create_engine
+from sqlalchemy import all_, create_engine
 from datetime import datetime, timedelta
 import pandas as pd
 import os, time
@@ -81,6 +81,8 @@ def sync_survey123_multiple(eng, gis, tables):
             df['controltest_endtime'] = df.timeirrigationoff.apply(lambda x: pd.Timestamp(x).time() if not pd.isnull(x) else pd.NaT)
 
             all_survey_data = pd.concat([all_survey_data, df], ignore_index = True)
+        
+        all_survey_data['station'] = all_survey_data.station.str.replace('Moundtop','Moundtop ')
 
         # replace since sometimes they make edits to the data
         try:
