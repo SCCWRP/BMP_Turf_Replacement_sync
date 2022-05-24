@@ -103,6 +103,23 @@ def fetch_survey123data(gis, surv_name, surv_key, cols = None):
     print(df)
     return df
 
+# Accepts rain data and returns start and end of rain events conditioned on:
+# Start: Has rained more than 0.2 in in less than 2 hours
+# End: Has not rained for more than 6 hours
+def get_rainevents(rain):
+    rainevent = pd.DataFrame()
+    rainswitch = False
+    start = None
+    for day in rain.iterrows():
+        if ~rainswitch & (day[1].value!=0) & (rain[(day[1].reading<=rain.reading) & (day[1].reading+timedelta(hours=2)>rain.reading)].value.sum() >= 0.2): 
+            rainswitch = True
+            start = day[1].reading
+        elif rainswitch & (rain[(day[1].reading<=rain.reading) & (day[1].reading+timedelta(hours=6)>rain.reading)].value.sum() == 0):
+            rainswitch = False
+            rainevent = pd.concat([rainevent, pd.DataFrame([start, day[1].reading]).transpose()], axis=0)
+        else: continue
+    return rainevent
+
 
 # Send mail function along with its imports
 from email.mime.text import MIMEText
