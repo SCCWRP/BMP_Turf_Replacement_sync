@@ -15,22 +15,8 @@ import os, time
 
 from functions import fetch_survey123data, exception_handler
 
-
-
-### SQL Engine ###
-DB_PLATFORM = os.environ.get('DB_PLATFORM')
-DB_HOST = os.environ.get('DB_HOST')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
-DB_PORT = os.environ.get('DB_PORT')
-DB_NAME = os.environ.get('DB_NAME')
-
-eng = create_engine(
-    f"{DB_PLATFORM}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
-
 @exception_handler
-def controltestcalcs(station, date):
+def controltestcalcs(station, date, eng):
     sensors = pd.read_sql(f"SELECT sensor FROM tbl_sensorid WHERE sitename='{station}'", eng)
     if len(sensors.sensor)==0:
         print(f"No sensors found for station:{station}")
