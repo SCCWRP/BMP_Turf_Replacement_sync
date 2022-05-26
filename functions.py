@@ -2,7 +2,7 @@ import pandas as pd
 import requests, os, inspect, traceback, re
 from io import StringIO
 from executing import Source # executing library depends on asttokens which must be installed separately
-from datetime import datetime
+from datetime import datetime, timedelta
 
 site_id = 15
 device_id = 1
@@ -103,7 +103,7 @@ def fetch_survey123data(gis, surv_name, surv_key, cols = None):
     print(df)
     return df
 
-# Accepts rain data and returns start and end of rain events conditioned on:
+# Accepts rain data (should have column for sitename but only one site) and returns start and end of rain events conditioned on:
 # Start: Has rained more than 0.2 in in less than 2 hours
 # End: Has not rained for more than 6 hours
 def get_rainevents(rain):
@@ -116,8 +116,9 @@ def get_rainevents(rain):
             start = day[1].reading
         elif rainswitch & (rain[(day[1].reading<=rain.reading) & (day[1].reading+timedelta(hours=6)>rain.reading)].value.sum() == 0):
             rainswitch = False
-            rainevent = pd.concat([rainevent, pd.DataFrame([start, day[1].reading]).transpose()], axis=0)
+            rainevent = pd.concat([rainevent, pd.DataFrame([day[1].sitename, start, day[1].reading, day[1].unit]).transpose()], axis=0)
         else: continue
+    rainevent.columns = ['sitename', 'rainstart', 'rainend', 'unit']
     return rainevent
 
 
