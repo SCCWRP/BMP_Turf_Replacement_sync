@@ -8,7 +8,8 @@ import json, os, sys
 from functions import get_rainevents, exception_handler
 
 @exception_handler
-def sync_raincalcs(stations, eng):
+def sync_raincalcs(eng):
+    stations = pd.read_sql("SELECT DISTINCT site FROM lu_nearestraingauge", eng).site.values
     report = []
     main_df = pd.DataFrame()
     for station in stations:
@@ -37,10 +38,11 @@ def sync_raincalcs(stations, eng):
             prioravg1 = pd.read_sql(f"""
                                 SELECT
                                     sensor,
-                                    AVG(result) AS priorhouravg
+                                    AVG(result) AS priorhouravg,
+                                    unit AS priorhouravgunit
                                 FROM tbl_watervolume
                                 WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup})
-                                GROUP BY sensor
+                                GROUP BY sensor, unit
                                     """, eng)
 
             # If database does not contain any readings for specified sensors, move on to next rain event.
@@ -79,9 +81,10 @@ def sync_raincalcs(stations, eng):
             maxduration = []
             for sensor in sensors_tup:
                 maxresult.append(rainmax[rainmax.sensor==sensor].maxresult.values[0])
-                maxtime.append(str(rainmax[rainmax.sensor==sensor].timestamp.max()))
-                maxduration.append(str(rainmax[rainmax.sensor==sensor].timestamp.max() - rainmax[rainmax.sensor==sensor].timestamp.min())[:-2])
+                maxtime.append(str(rainmax[rainmax.sensor==sensor].timestamp.max())[:-3])
+                maxduration.append(str(rainmax[rainmax.sensor==sensor].timestamp.max() - rainmax[rainmax.sensor==sensor].timestamp.min())[:-3])
             side_df['maxresult'] = pd.DataFrame(maxresult).round(3)
+            side_df['maxresultUnit'] = side_df.priorhouravgunit
             side_df['maxtime'] = maxtime
             side_df['maxduration'] = maxduration
             print("Complete\n")
@@ -98,31 +101,33 @@ def sync_raincalcs(stations, eng):
 
             elapsedtime = []
             print("Finding time elapsed until results return to prior hour averages")
-            for sensor, priorhouravg in prioravg1.itertuples(index=False):
+            for sensor, priorhouravg, priorhouravgunit in prioravg1.itertuples(index=False):
                 elapsedtime.append(str(pd.read_sql(f"""
                                     SELECT "timestamp"
                                     FROM tbl_watervolume
                                     WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND result < {priorhouravg}
                                     ORDER BY "timestamp"
                                     LIMIT 1
-                                    """, eng).timestamp[0] - event[1].rainend)[:-2])
+                                    """, eng).timestamp[0] - event[1].rainend)[:-3])
             print(elapsedtime)
             side_df['elapsedtime'] = elapsedtime
             print("Complete\n")
             side_df['totaldepth'] = [totaldepth.values[0][0]] * len(sensors_tup)
-            side_df['rainstart'] = [event[1].rainstart] * len(sensors_tup)
-            side_df['rainend'] = [event[1].rainend] * len(sensors_tup)
+            side_df['totaldepthunit'] = [event[1].unit] * len(sensors_tup)
+            side_df['rainstart'] = [str(event[1].rainstart)[:-3]] * len(sensors_tup)
+            side_df['rainend'] = [str(event[1].rainend)[:-3]] * len(sensors_tup)
             side_df['region'] = [event[1].sitename] * len(sensors_tup)
-            side_df['unit'] = [event[1].unit] * len(sensors_tup)
             side_df['sitename'] = [station] * len(sensors_tup)
             main_df = pd.concat([main_df, side_df], axis=0)
             report.append(f"{len(sensors_tup)} sensors were active during the rainevent {event_interval.lower()} at {station}")
     
     try:
-        main_df.to_sql(f"tbl_rainevent_test", eng, index=False, if_exists='replace')
+        eng.execute("DROP VIEW IF EXISTS vw_rainevent;")
+        main_df.to_sql(f"tbl_rainevent", eng, index=False, if_exists='replace')
         report.append(f"Rain event calculcations successfully loaded for")
     except Exception as e:
         print(f"Could not load the records due to an unexpected error.\n{e}")
+        report.append(f"Could not load the records due to an unexpected error.\n{e}")
     return report
 
 # temporary load to database
