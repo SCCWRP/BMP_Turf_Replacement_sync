@@ -114,10 +114,11 @@ def get_rainevents(rain):
         if ~rainswitch & (day[1].value!=0) & (rain[(day[1].reading<=rain.reading) & (day[1].reading+timedelta(hours=2)>rain.reading)].value.sum() >= 0.2): 
             rainswitch = True
             start = day[1].reading
-        elif rainswitch & (rain[(day[1].reading<=rain.reading) & (day[1].reading+timedelta(hours=6)>rain.reading)].value.sum() == 0):
+        elif rainswitch & (rain[(day[1].reading<rain.reading) & (day[1].reading+timedelta(hours=6)>rain.reading)].value.sum() == 0):
             rainswitch = False
             rainevent = pd.concat([rainevent, pd.DataFrame([day[1].sitename, start, day[1].reading, day[1].unit]).transpose()], axis=0)
-        else: continue
+        else:
+            continue
     rainevent.columns = ['sitename', 'rainstart', 'rainend', 'unit']
     return rainevent
 

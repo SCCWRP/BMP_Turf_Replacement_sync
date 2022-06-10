@@ -15,14 +15,16 @@ import os, time
 from functions import exception_handler
 
 @exception_handler
-def controltestcalcs(eng):
+def sync_controltestcalcs(eng):
+    report = []
+    report.append("Starting the controlled test calculation script")
     tests = pd.read_sql("SELECT DISTINCT station, controltestdate FROM tbl_controltest ORDER BY controltestdate", eng)
     tests.columns = ["station", "date"]
     final_df = pd.DataFrame()
     for station, date in tests.itertuples(index=False):
         sensors = pd.read_sql(f"SELECT sensor FROM tbl_sensorid WHERE sitename='{station}'", eng)
         if len(sensors.sensor)==0:
-            print(f"No sensors found for station: {station}")
+            print(f"No active sensors found for station {station}")
             continue
 
         # Get controlled test records without any nulls
@@ -88,17 +90,18 @@ def controltestcalcs(eng):
         print("Finding maximum result during test for each sensor")
         testmax = pd.read_sql(f"""
                                 WITH trunc_result AS (
-                                    SELECT sensor, "timestamp", result
+                                    SELECT sensor, "timestamp", result, unit
                                     FROM tbl_watervolume 
                                     WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
                                 )
-                                SELECT table1.sensor, maxresult, "timestamp"
+                                SELECT table1.sensor, maxresult, "timestamp", table1.unit
                                 FROM (
                                     SELECT
                                         sensor,
-                                        MAX(result) AS maxresult
+                                        MAX(result) AS maxresult,
+                                        unit
                                     FROM trunc_result
-                                    GROUP BY sensor
+                                    GROUP BY sensor, unit
                                 ) AS table1 
                                 LEFT JOIN trunc_result
                                 ON table1.maxresult = trunc_result.result AND table1.sensor = trunc_result.sensor
@@ -107,11 +110,14 @@ def controltestcalcs(eng):
         maxresult = []
         maxtime = []
         maxduration = []
+        watervolumeunit = []
         for sensor in sensors_tup:
             maxresult.append(testmax[testmax.sensor==sensor].maxresult.values[0])
-            maxtime.append(str(testmax[testmax.sensor==sensor].timestamp.max()))
-            maxduration.append(str(testmax[testmax.sensor==sensor].timestamp.max() - testmax[testmax.sensor==sensor].timestamp.min()))
+            maxtime.append(str(testmax[testmax.sensor==sensor].timestamp.max())[:-3])
+            maxduration.append(round((testmax[testmax.sensor==sensor].timestamp.max() - testmax[testmax.sensor==sensor].timestamp.min()).seconds/3600,3))
+            watervolumeunit.append(testmax[testmax.sensor==sensor].unit.values[0])
         main_df['maxresult'] = maxresult
+        main_df['watervolumeunit'] = watervolumeunit
         main_df['maxtime'] = maxtime
         main_df['maxduration'] = maxduration
         print("Complete\n")
@@ -132,13 +138,26 @@ def controltestcalcs(eng):
                                 LIMIT 1
                                 """, eng)
                 if temp.empty: elapsedtime.append(-88)
-                else: elapsedtime.append(round((temp.timestamp[0]-controltest_end).seconds/3600,3))
+                else: elapsedtime.append(round((temp.timestamp[0]-controltest_end).days*24+(temp.timestamp[0]-controltest_end).seconds/3600,3))
 
         print(elapsedtime)
+        if -88 in elapsedtime:
+            report.append(f"For some sensors during the controlled test at {station} on {date}, the script failed to obtain time it takes for sensors to reach prior hour averages. They are indicated by '-88'")
         main_df['elapsedtime'] = elapsedtime
+        main_df['timeunits'] = ['hrs'] * len(sensors_tup)
         main_df['station'] = [station] * len(sensors_tup)
         main_df['date'] = [date] * len(sensors_tup)
+        main_df.priordayavg = main_df.priordayavg.round(3)
+        main_df.priorhouravg = main_df.priorhouravg.round(3)
         print("Complete\n")
         final_df = pd.concat([final_df, main_df], axis=0, ignore_index=True)
-    final_df.to_sql(f"tbl_controlcalcs", eng, index=False, if_exists='replace')
+    
+    try:
+        final_df.to_sql(f"tbl_controlcalcs", eng, index=False, if_exists='replace')
+        print(final_df)
+        report.append(f"Controlled test calculcations successfully loaded for")
+    except Exception as e:
+        print(f"Could not load the records due to an unexpected error.\n{e}")
+        report.append(f"Could not load the records due to an unexpected error.\n{e}")
+    return report
 

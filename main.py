@@ -9,6 +9,7 @@ from meta import sync_metadata
 from survey123 import sync_survey123_multiple
 from raincalcs import sync_raincalcs
 from views import create_views
+from controltestcalcs import sync_controltestcalcs
 
 from arcgis.gis import GIS
 
@@ -91,6 +92,7 @@ report = [
     ),
     *sync_survey123_multiple(eng, gis, tables),
     *sync_raincalcs(eng),
+    *sync_controltestcalcs(eng),
     *create_views(eng)
 ]
 

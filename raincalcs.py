@@ -52,7 +52,6 @@ def sync_raincalcs(eng):
                 continue
 
             sensors_tup = tuple(prioravg1.sensor)
-            prioravg1.priorhouravg = prioravg1.priorhouravg.round(3)
             print(prioravg1)
             side_df = prioravg1.copy()
             print("Complete\n")
@@ -82,7 +81,7 @@ def sync_raincalcs(eng):
             for sensor in sensors_tup:
                 maxresult.append(rainmax[rainmax.sensor==sensor].maxresult.values[0])
                 maxtime.append(str(rainmax[rainmax.sensor==sensor].timestamp.max())[:-3])
-                maxduration.append(str(rainmax[rainmax.sensor==sensor].timestamp.max() - rainmax[rainmax.sensor==sensor].timestamp.min())[:-3])
+                maxduration.append(round((rainmax[rainmax.sensor==sensor].timestamp.max() - rainmax[rainmax.sensor==sensor].timestamp.min()).seconds/3600,3))
             side_df['maxresult'] = pd.DataFrame(maxresult).round(3)
             side_df['maxresultUnit'] = side_df.priorhouravgunit
             side_df['maxtime'] = maxtime
@@ -102,15 +101,17 @@ def sync_raincalcs(eng):
             elapsedtime = []
             print("Finding time elapsed until results return to prior hour averages")
             for sensor, priorhouravg, priorhouravgunit in prioravg1.itertuples(index=False):
-                elapsedtime.append(str(pd.read_sql(f"""
-                                    SELECT "timestamp"
-                                    FROM tbl_watervolume
-                                    WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND result < {priorhouravg}
-                                    ORDER BY "timestamp"
-                                    LIMIT 1
-                                    """, eng).timestamp[0] - event[1].rainend)[:-3])
+                temp = pd.read_sql(f"""
+                                SELECT "timestamp"
+                                FROM tbl_watervolume
+                                WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND result <= {priorhouravg}
+                                ORDER BY "timestamp"
+                                LIMIT 1
+                                """, eng)
+                elapsedtime.append(round((temp.timestamp[0]-event[1].rainend).days*24+(temp.timestamp[0]-event[1].rainend).seconds/3600,3))
             print(elapsedtime)
             side_df['elapsedtime'] = elapsedtime
+            side_df['timeunits'] = ['hrs'] * len(sensors_tup)
             print("Complete\n")
             side_df['totaldepth'] = [totaldepth.values[0][0]] * len(sensors_tup)
             side_df['totaldepthunit'] = [event[1].unit] * len(sensors_tup)
@@ -118,12 +119,14 @@ def sync_raincalcs(eng):
             side_df['rainend'] = [str(event[1].rainend)[:-3]] * len(sensors_tup)
             side_df['region'] = [event[1].sitename] * len(sensors_tup)
             side_df['sitename'] = [station] * len(sensors_tup)
+            side_df.priorhouravg= side_df.priorhouravg.round(3)
             main_df = pd.concat([main_df, side_df], axis=0)
             report.append(f"{len(sensors_tup)} sensors were active during the rainevent {event_interval.lower()} at {station}")
     
     try:
         eng.execute("DROP VIEW IF EXISTS vw_rainevent;")
         main_df.to_sql(f"tbl_rainevent", eng, index=False, if_exists='replace')
+        print(main_df)
         report.append(f"Rain event calculcations successfully loaded for")
     except Exception as e:
         print(f"Could not load the records due to an unexpected error.\n{e}")
