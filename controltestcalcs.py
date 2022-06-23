@@ -1,16 +1,6 @@
-from sqlalchemy import create_engine
 from datetime import datetime, timedelta
-from arcgis.gis import GIS
 import pandas as pd
-import numpy as np
-import os, time
-import json
 import math
-
-from sqlalchemy import create_engine
-from datetime import datetime, timedelta
-import pandas as pd
-import os, time
 
 from functions import exception_handler
 
@@ -61,7 +51,7 @@ def sync_controltestcalcs(eng):
                                 WITH tbl_priorday AS (
                                     SELECT sensor, result, "timestamp"
                                     FROM tbl_watervolume
-                                    WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup}
+                                    WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup} AND (ABS(result) < 1.01)
                                 )
                                 SELECT table1.sensor, priordayavg, priorhouravg
                                 FROM (
@@ -92,7 +82,7 @@ def sync_controltestcalcs(eng):
                                 WITH trunc_result AS (
                                     SELECT sensor, "timestamp", result, unit
                                     FROM tbl_watervolume 
-                                    WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
+                                    WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup} AND ABS(result) < 1.01) 
                                 )
                                 SELECT table1.sensor, maxresult, "timestamp", table1.unit
                                 FROM (
@@ -112,10 +102,17 @@ def sync_controltestcalcs(eng):
         maxduration = []
         watervolumeunit = []
         for sensor in sensors_tup:
-            maxresult.append(testmax[testmax.sensor==sensor].maxresult.values[0])
-            maxtime.append(str(testmax[testmax.sensor==sensor].timestamp.max())[:-3])
-            maxduration.append(round((testmax[testmax.sensor==sensor].timestamp.max() - testmax[testmax.sensor==sensor].timestamp.min()).seconds/3600,3))
-            watervolumeunit.append(testmax[testmax.sensor==sensor].unit.values[0])
+            tmp = testmax[testmax.sensor==sensor]
+            if not tmp.empty:
+                maxresult.append(tmp.maxresult.values[0])
+                maxtime.append(str(tmp.timestamp.max())[:-3])
+                maxduration.append(round((tmp.timestamp.max() - tmp.timestamp.min()).seconds/3600,3))
+                watervolumeunit.append(tmp.unit.values[0])
+            else:
+                maxresult.append(pd.NA)
+                maxtime.append(pd.NA)
+                maxduration.append(pd.NA)
+                watervolumeunit.append(pd.NA)
         main_df['maxresult'] = maxresult
         main_df['watervolumeunit'] = watervolumeunit
         main_df['maxtime'] = maxtime
@@ -137,8 +134,11 @@ def sync_controltestcalcs(eng):
                                 ORDER BY "timestamp"
                                 LIMIT 1
                                 """, eng)
-                if temp.empty: elapsedtime.append(-88)
-                else: elapsedtime.append(round((temp.timestamp[0]-controltest_end).days*24+(temp.timestamp[0]-controltest_end).seconds/3600,3))
+                if temp.empty: 
+                    elapsedtime.append(-88)
+                else: 
+                    # get elapsed time in hours
+                    elapsedtime.append(round((temp.timestamp[0]-controltest_end).days*24+(temp.timestamp[0]-controltest_end).seconds/3600,3))
 
         print(elapsedtime)
         if -88 in elapsedtime:

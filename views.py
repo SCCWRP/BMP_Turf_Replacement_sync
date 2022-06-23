@@ -26,4 +26,25 @@ def create_views(eng):
             )
         """
     )
-    return ['The materialized view vw_watervolume was recreated successfully']
+
+    print("vw_rainevent")
+    eng.execute(
+        """
+        CREATE VIEW vw_rainevent AS (
+            WITH raindata AS (
+                SELECT DISTINCT tbl_rainevent.region,
+                    tbl_rainevent.rainstart,
+                    tbl_rainevent.rainend,
+                    tbl_rainevent.totaldepth
+                FROM tbl_rainevent
+            )
+            SELECT lu_nearestraingauge.site AS sitename,
+                raindata.rainstart,
+                raindata.rainend,
+                raindata.totaldepth
+            FROM raindata
+                JOIN lu_nearestraingauge ON raindata.region = lu_nearestraingauge.raingauge
+        )
+        """
+    )
+    return ['The materialized views vw_watervolume and vw_rainevent were recreated successfully']

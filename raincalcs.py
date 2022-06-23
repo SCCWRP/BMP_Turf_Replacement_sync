@@ -41,7 +41,7 @@ def sync_raincalcs(eng):
                                     AVG(result) AS priorhouravg,
                                     unit AS priorhouravgunit
                                 FROM tbl_watervolume
-                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup})
+                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup}  AND (ABS(result) < 1.01))
                                 GROUP BY sensor, unit
                                     """, eng)
 
@@ -61,7 +61,7 @@ def sync_raincalcs(eng):
                                     WITH trunc_result AS (
                                         SELECT sensor, "timestamp", result
                                         FROM tbl_watervolume 
-                                        WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup}) 
+                                        WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup} AND (ABS(result) < 1.01) ) 
                                     )
                                     SELECT table1.sensor, maxresult, "timestamp"
                                     FROM (
@@ -79,9 +79,16 @@ def sync_raincalcs(eng):
             maxtime = []
             maxduration = []
             for sensor in sensors_tup:
-                maxresult.append(rainmax[rainmax.sensor==sensor].maxresult.values[0])
-                maxtime.append(str(rainmax[rainmax.sensor==sensor].timestamp.max())[:-3])
-                maxduration.append(round((rainmax[rainmax.sensor==sensor].timestamp.max() - rainmax[rainmax.sensor==sensor].timestamp.min()).seconds/3600,3))
+                tmp = rainmax[rainmax.sensor==sensor]
+                if not tmp.empty:
+                    maxresult.append(tmp.maxresult.values[0])
+                    maxtime.append(str(tmp.timestamp.max())[:-3])
+                    maxduration.append(round((tmp.timestamp.max() - tmp.timestamp.min()).seconds/3600,3))
+                else:
+                    maxresult.append(pd.NA)
+                    maxtime.append(pd.NA)
+                    maxduration.append(pd.NA)
+
             side_df['maxresult'] = pd.DataFrame(maxresult).round(3)
             side_df['maxresultUnit'] = side_df.priorhouravgunit
             side_df['maxtime'] = maxtime
