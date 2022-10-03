@@ -86,7 +86,47 @@ def sync_survey123_multiple(eng, gis, tables):
 
         # replace since sometimes they make edits to the data
         try:
+
+            # Manually add these controltests - per Elizabeth 7/26/2022
+            # Some tests were performed before the survey was set up
+            all_survey_data = pd.concat(
+                [
+                    pd.DataFrame({
+                        "station"               : ['Fieldcrest', 'Moundtop 1', 'Moundtop 3'],
+                        "timeirrigationon"      : ['2022-04-22 10:58:00','2022-04-22 12:23:00','2022-04-22 12:23:00'],
+                        "timeirrigationoff"     : ['13:23','14:32','14:32'],
+                        "controltestdate"       : ['2022-04-22','2022-04-22','2022-04-22'],
+                        "controltest_starttime" : ['10:58:00','12:23:00','12:23:00'],
+                        "controltest_endtime"   : ['13:23:00','14:32:00','14:32:00']
+                    }),
+                    all_survey_data 
+                ], 
+                ignore_index = True
+            )
+            
+            all_survey_data = all_survey_data.assign(sensorcheck = 'NO')
+            
+            # Now add on the sensorcheck control tests, which should not be included in calculations
+            all_survey_data = pd.concat(
+                [
+                    pd.DataFrame({
+                        "station"               : ['Moundtop 1', 'Moundtop 3', 'Fieldcrest'],
+                        "timeirrigationon"      : ['2022-08-05 10:00:00','2022-08-05 10:00:00','2022-08-05 09:00:00'],
+                        "timeirrigationoff"     : ['11:00','11:00','10:00'],
+                        "controltestdate"       : ['2022-08-05','2022-08-05','2022-08-05'],
+                        "controltest_starttime" : ['10:00:00','10:00:00','09:00:00'],
+                        "controltest_endtime"   : ['11:00:00','11:00:00','10:00:00'],
+                        "sensorcheck"           : ['YES','YES','YES']
+                    }),
+                    all_survey_data 
+                ], 
+                ignore_index = True
+            )
+
             all_survey_data.to_sql(tblname, eng, if_exists = 'replace', index = False)
+
+
+
             msgs.append(f"Data added from survey(s) {', '.join(surv for surv in survey_info.get('surveys').keys())} to table {tblname}")
         except Exception as e:
             msgs.append(f"Something went wrong loading the survey data for survey(s) {', '.join(surv for surv in survey_info.get('surveys').keys())}\n{str(e)[:1000]}")
