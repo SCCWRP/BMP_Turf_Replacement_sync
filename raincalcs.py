@@ -39,7 +39,8 @@ def sync_raincalcs(eng):
                                 SELECT
                                     sensor,
                                     AVG(result) AS priorhouravg,
-                                    unit AS priorhouravgunit
+                                    unit AS priorhouravgunit,
+                                    COUNT(*) AS priorhour_n
                                 FROM tbl_watervolume
                                 WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup}  AND (ABS(result) < 1.01))
                                 GROUP BY sensor, unit
@@ -63,11 +64,12 @@ def sync_raincalcs(eng):
                                         FROM tbl_watervolume 
                                         WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup} AND (ABS(result) < 1.01) ) 
                                     )
-                                    SELECT table1.sensor, maxresult, "timestamp"
+                                    SELECT table1.sensor, maxresult, max_n, "timestamp"
                                     FROM (
                                         SELECT
                                             sensor,
-                                            MAX(result) AS maxresult
+                                            MAX(result) AS maxresult,
+                                            COUNT(*) AS max_n
                                         FROM trunc_result
                                         GROUP BY sensor
                                     ) AS table1 
@@ -76,25 +78,28 @@ def sync_raincalcs(eng):
                                     """, eng)
             print(rainmax)
             maxresult = []
+            max_n = []
             maxtime = []
             maxduration = []
             for sensor in sensors_tup:
                 tmp = rainmax[rainmax.sensor==sensor]
                 if not tmp.empty:
                     maxresult.append(tmp.maxresult.values[0])
+                    max_n.append(tmp.max_n.values[0])
                     maxtime.append(str(tmp.timestamp.max())[:-3])
                     maxduration.append(round((tmp.timestamp.max() - tmp.timestamp.min()).seconds/3600,3))
                 else:
                     maxresult.append(pd.NA)
+                    max_n.append(pd.NA)
                     maxtime.append(pd.NA)
                     maxduration.append(pd.NA)
 
             side_df['maxresult'] = pd.DataFrame(maxresult).round(3)
+            side_df['max_n'] = max_n
             side_df['maxresultUnit'] = side_df.priorhouravgunit
             side_df['maxtime'] = maxtime
             side_df['maxduration'] = maxduration
             print("Complete\n")
-
 
             print("Finding total depth of rain during rain event")
             totaldepth = pd.read_sql(f"""
@@ -107,7 +112,7 @@ def sync_raincalcs(eng):
 
             elapsedtime = []
             print("Finding time elapsed until results return to prior hour averages")
-            for sensor, priorhouravg, priorhouravgunit in prioravg1.itertuples(index=False):
+            for sensor, priorhouravg in prioravg1[['sensor','priorhouravg']].itertuples(index=False):
                 temp = pd.read_sql(f"""
                                 SELECT "timestamp"
                                 FROM tbl_watervolume
