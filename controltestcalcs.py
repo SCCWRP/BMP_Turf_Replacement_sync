@@ -21,10 +21,10 @@ def sync_controltestcalcs(eng):
         test_info = pd.read_sql(f"""
                                 SELECT 
                                     station, 
-                                    timeirrigationon, 
-                                    controltestdate, 
-                                    controltest_starttime, 
-                                    controltest_endtime 
+                                    CAST(timeirrigationon AS TIMESTAMP), 
+                                    CAST(controltestdate AS DATE), 
+                                    CAST(controltest_starttime AS TIME), 
+                                    CAST(controltest_endtime AS TIME)
                                 FROM tbl_controltest 
                                 WHERE 
                                     (
@@ -36,6 +36,7 @@ def sync_controltestcalcs(eng):
                                     AND controltestdate IS NOT NULL
                                     AND controltest_starttime IS NOT NULL
                                     AND controltest_endtime IS NOT NULL
+                                    AND sensorcheck = 'NO'
                                     )
                                 """, eng).to_dict()
         if len(test_info['station'])==0:
@@ -53,17 +54,19 @@ def sync_controltestcalcs(eng):
                                     FROM tbl_watervolume
                                     WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup} AND (ABS(result) < 1.01)
                                 )
-                                SELECT table1.sensor, priordayavg, priorhouravg
+                                SELECT table1.sensor, priordayavg, priorday_n, priorhouravg, priorhour_n
                                 FROM (
                                     SELECT 
                                         sensor, 
-                                        AVG(result) AS priordayavg 
+                                        AVG(result) AS priordayavg,
+                                        COUNT(*) AS priorday_n
                                     FROM tbl_priorday
                                     GROUP BY sensor
                                     ) AS table1 FULL JOIN (
                                     SELECT
                                         sensor,
-                                        AVG(result) AS priorhouravg
+                                        AVG(result) AS priorhouravg,
+                                        COUNT(*) AS priorhour_n
                                     FROM tbl_priorday
                                     WHERE ("timestamp" {priorhour})
                                     GROUP BY sensor
@@ -84,11 +87,12 @@ def sync_controltestcalcs(eng):
                                     FROM tbl_watervolume 
                                     WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup} AND ABS(result) < 1.01) 
                                 )
-                                SELECT table1.sensor, maxresult, "timestamp", table1.unit
+                                SELECT table1.sensor, maxresult, max_n, "timestamp", table1.unit
                                 FROM (
                                     SELECT
                                         sensor,
                                         MAX(result) AS maxresult,
+                                        COUNT(*) AS max_n,
                                         unit
                                     FROM trunc_result
                                     GROUP BY sensor, unit
@@ -98,6 +102,7 @@ def sync_controltestcalcs(eng):
                                 """, eng)
         print(testmax)
         maxresult = []
+        max_n = []
         maxtime = []
         maxduration = []
         watervolumeunit = []
@@ -105,11 +110,13 @@ def sync_controltestcalcs(eng):
             tmp = testmax[testmax.sensor==sensor]
             if not tmp.empty:
                 maxresult.append(tmp.maxresult.values[0])
+                max_n.append(int(tmp.max_n.values[0]))
                 maxtime.append(str(tmp.timestamp.max())[:-3])
                 maxduration.append(round((tmp.timestamp.max() - tmp.timestamp.min()).seconds/3600,3))
                 watervolumeunit.append(tmp.unit.values[0])
             else:
                 maxresult.append(pd.NA)
+                max_n.append(pd.NA)
                 maxtime.append(pd.NA)
                 maxduration.append(pd.NA)
                 watervolumeunit.append(pd.NA)
@@ -117,12 +124,15 @@ def sync_controltestcalcs(eng):
         main_df['watervolumeunit'] = watervolumeunit
         main_df['maxtime'] = maxtime
         main_df['maxduration'] = maxduration
+        main_df['max_n'] = max_n
         print("Complete\n")
 
         elapsedtime = []
         controltest_end = pd.Timestamp(datetime.combine(test_info['controltestdate'][0], test_info['controltest_endtime'][0]))
         print("Finding time elapsed until results return to prior hour averages")
-        for sensor, priordayavg, priorhouravg in prioravg1.itertuples(index=False):
+        
+        # order of these args is important
+        for sensor, priordayavg, priorhouravg in prioravg1[['sensor','priordayavg','priorhouravg']].itertuples(index=False):
             if math.isnan(priordayavg) | math.isnan(priorhouravg) :
                 elapsedtime.append(-88)
             # Use '<=' in the query for the case when readings are 7999 indefinitely
