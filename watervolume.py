@@ -98,8 +98,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
         print(df.dtypes)
 
         # clean up the column names
-        # First lower case namesa and replace '^' with ''. Then replace space... with underscore.
-        # WHY DIDNT HE REPLACE TWICE? WHY RE.SUB?
+        # First lower case namesa and replace '^' with ''. Then replace space with underscore.
         df.columns = [re.sub('\s+','_', c.strip().lower().replace('^','')) for c in df.columns]
 
         # columns have now been lowercased
