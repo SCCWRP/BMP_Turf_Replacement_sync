@@ -3,6 +3,7 @@ import requests, os, inspect, traceback, re
 from io import StringIO
 from executing import Source # executing library depends on asttokens which must be installed separately
 from datetime import datetime, timedelta
+import numpy as np
 
 site_id = 15
 device_id = 1
@@ -181,3 +182,67 @@ def exception_handler(func):
         except Exception as e:
             return [f'Unexpected error in {func.__name__}:\nArguments: {args}\n{str(e)[:1000]}']
     return callback
+
+
+def permittivitycalc(row, lowKaconstant, highKaconstant, limitKaconstant):
+    # function from Dario to calculate ToppVWC values
+    # test_df = pd.DataFrame({'timestamp':['2022-06-03 12:53:00','2022-06-03 12:54:00','2022-06-03 12:55:00'], 'sensor':['S3TC1T01','S3TC1T01',s3tc1t01w], 'wv':[7999.0,7999.0,0.361], 'ec':[1.261,1.260,0.202], 'pa':[5.274,5.274,3.454], 'ka':[7999,7999,21.32]})
+    # test_df['timestamp'] = pd.to_datetime(test_df['timestamp'])
+    # test_df.apply(permittivitycalc, axis = 1)
+    if (row['wvc_raw'] == 7999.0 and row['ka_raw'] == 7999.0):
+        results = row
+
+        EC = row['ec']
+        PA = row['pa']
+
+        lowKa = (lowKaconstant['C0']*EC**3*PA**2) + (lowKaconstant['C1']*EC**2*PA**2) + (lowKaconstant['C2']*EC*PA**2) + (lowKaconstant['C3']*PA**2) + (lowKaconstant['C4']*EC**3*PA)+(lowKaconstant['C5']*EC**2*PA) \
+            + (lowKaconstant['C6']*EC*PA)+(lowKaconstant['C7']*PA)+(lowKaconstant['C8']*EC**3)+(lowKaconstant['C9']*EC**2) + (lowKaconstant['C10']*EC) + lowKaconstant['C11']
+        highKa = (highKaconstant['C0']*EC**3*PA**2) + (highKaconstant['C1']*EC**2*PA**2) + (highKaconstant['C2']*EC*PA**2) + (highKaconstant['C3']*PA**2) + (highKaconstant['C4']*EC**3*PA) + (highKaconstant['C5']*EC**2*PA) \
+            + (highKaconstant['C6']*EC*PA) + (highKaconstant['C7']*PA) + (highKaconstant['C8']*EC**3) + (highKaconstant['C9']*EC**2) + (highKaconstant['C10']*EC) + highKaconstant['C11']
+        
+        limitKa = limitKaconstant['C0'] + (limitKaconstant['C1']*EC) + (limitKaconstant['C2']*EC**2) + (limitKaconstant['C3']*EC**3) + (limitKaconstant['C4']*EC**4) + (limitKaconstant['C5']*EC**5)
+        limitKa80 = 0.8*limitKa
+        if (EC <= 1.09 and lowKa > 40):
+            newKa = highKa
+        else:
+            newKa = lowKa
+        Kacorrectionconstant = pd.Series({'Kamult':1.03, 'Kaoffset':-0.3})
+        
+        # Based on instructions in the excel file that Dario gave
+        correctedKa = (newKa*Kacorrectionconstant['Kamult']) + Kacorrectionconstant['Kaoffset']
+        
+
+        # So we can see the calculated values as they were, before making decisions on whether or not to keep them
+        results['ka_calc'] = correctedKa
+        correctedTopp = (-0.053)+(0.0292*(correctedKa))-(0.00055*(correctedKa)**2)+(0.0000043*(correctedKa)**3) 
+        results['wvc_prelim_calc'] = correctedTopp
+
+
+        # if certain conditions are met, we are instructed to change KA and Topp to NULL or 1 or 0 sometimes
+        if (correctedKa < 0) or (correctedKa > 88) or (correctedKa < limitKa80) or (PA < 1.18) or (np.round(EC, 2) > 1.09):
+            correctedKa = pd.NA
+        elif correctedKa < 1:
+            correctedKa = 1
+        
+        # So we can see the calculated values as they were, before making decisions on whether or not to keep them
+        correctedTopp = (-0.053)+(0.0292*(correctedKa))-(0.00055*(correctedKa)**2)+(0.0000043*(correctedKa)**3) 
+        results['wvc_calc'] = correctedTopp
+
+        if not pd.isnull(correctedKa):
+            if 1 <= correctedKa <= 1.881:
+                correctedTopp = 0
+            elif correctedKa > 40:
+                correctedTopp = pd.NA
+
+        
+        results['ka_final'] = correctedKa
+        results['wvc_final'] = correctedTopp
+        results['highka'] = highKa
+        results['lowka'] = lowKa
+        results['kalimit'] = limitKa
+        results['kalimit80pct'] = limitKa80
+        results['calculated'] = True
+    else:
+        results['calculated'] = False
+
+    return results

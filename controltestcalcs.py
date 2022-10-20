@@ -50,9 +50,9 @@ def sync_controltestcalcs(eng):
         print("Finding prior day and hour averages for all sensors")
         prioravg1 = pd.read_sql(f"""
                                 WITH tbl_priorday AS (
-                                    SELECT sensor, result, "timestamp"
+                                    SELECT sensor, wvc_final AS result, "timestamp"
                                     FROM tbl_watervolume
-                                    WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup} AND (ABS(result) < 1.01)
+                                    WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup}
                                 )
                                 SELECT table1.sensor, priordayavg, priorday_n, priorhouravg, priorhour_n
                                 FROM (
@@ -83,9 +83,9 @@ def sync_controltestcalcs(eng):
         print("Finding maximum result during test for each sensor")
         testmax = pd.read_sql(f"""
                                 WITH trunc_result AS (
-                                    SELECT sensor, "timestamp", result, unit
+                                    SELECT sensor, "timestamp", wvc_final AS result, wvcunit AS unit
                                     FROM tbl_watervolume 
-                                    WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup} AND ABS(result) < 1.01) 
+                                    WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
                                 )
                                 SELECT table1.sensor, maxresult, max_n, "timestamp", table1.unit
                                 FROM (
@@ -140,7 +140,7 @@ def sync_controltestcalcs(eng):
                 temp = pd.read_sql(f"""
                                 SELECT "timestamp"
                                 FROM tbl_watervolume
-                                WHERE sensor = '{sensor}' AND "timestamp" > '{controltest_end}' AND result <= {priorhouravg}
+                                WHERE sensor = '{sensor}' AND "timestamp" > '{controltest_end}' AND wvc_final <= {priorhouravg}
                                 ORDER BY "timestamp"
                                 LIMIT 1
                                 """, eng)

@@ -33,10 +33,6 @@ gis = GIS("https://www.arcgis.com",gis_username,gis_password)
 print("Logged in as " + str(gis.properties.user.username))
 ##################
 
-
-# initialize report
-report = []
-
 tables = {
     "tbl_controltest" : {
         "cols": ['station','timeirrigationon','timeirrigationoff'],
@@ -48,10 +44,8 @@ tables = {
 }
 
 
-
 # sync rain data from February 2022 and later
 report = [
-    *report, 
     *sync_metadata(
         username = os.environ.get('MS_USERNAME'),
         password = os.environ.get('MS_PASSWORD'),
@@ -99,7 +93,11 @@ report = [
 SEND_FROM = 'admin@checker.sccwrp.org'
 SEND_TO = ['robertb@sccwrp.org']
 SUBJECT = 'San Diego Turf BMP Sync Report'
-BODY = '\n\n'.join(report)
+BODY = '\n\n'.join([str(x) for x in report])
 SERVER = '192.168.1.18'
-send_mail(SEND_FROM, SEND_TO, SUBJECT, BODY, server = SERVER)
+try:
+    send_mail(SEND_FROM, SEND_TO, SUBJECT, BODY, server = SERVER)
+except Exception as e:
+    send_mail(SEND_FROM, SEND_TO, SUBJECT, f"Exception occurred sending email\n{e}", server = SERVER)
+
 

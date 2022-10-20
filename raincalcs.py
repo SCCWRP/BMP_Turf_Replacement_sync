@@ -38,11 +38,11 @@ def sync_raincalcs(eng):
             prioravg1 = pd.read_sql(f"""
                                 SELECT
                                     sensor,
-                                    AVG(result) AS priorhouravg,
+                                    AVG(wvc_final) AS priorhouravg,
                                     unit AS priorhouravgunit,
                                     COUNT(*) AS priorhour_n
                                 FROM tbl_watervolume
-                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup}  AND (ABS(result) < 1.01))
+                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup}  AND (ABS(wvc_final) < 1.01))
                                 GROUP BY sensor, unit
                                     """, eng)
 
@@ -60,9 +60,9 @@ def sync_raincalcs(eng):
             print("Finding maximum result during rain event for each sensor")
             rainmax = pd.read_sql(f"""
                                     WITH trunc_result AS (
-                                        SELECT sensor, "timestamp", result
+                                        SELECT sensor, "timestamp", wvc_final AS result
                                         FROM tbl_watervolume 
-                                        WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup} AND (ABS(result) < 1.01) ) 
+                                        WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup} AND (ABS(wvc_final) < 1.01) ) 
                                     )
                                     SELECT table1.sensor, maxresult, max_n, "timestamp"
                                     FROM (
@@ -116,7 +116,7 @@ def sync_raincalcs(eng):
                 temp = pd.read_sql(f"""
                                 SELECT "timestamp"
                                 FROM tbl_watervolume
-                                WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND result <= {priorhouravg}
+                                WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND wvc_final <= {priorhouravg}
                                 ORDER BY "timestamp"
                                 LIMIT 1
                                 """, eng)
@@ -145,15 +145,3 @@ def sync_raincalcs(eng):
         report.append(f"Could not load the records due to an unexpected error.\n{e}")
     return report
 
-# temporary load to database
-
-DB_PLATFORM = os.environ.get('DB_PLATFORM')
-DB_HOST = os.environ.get('DB_HOST')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
-DB_PORT = os.environ.get('DB_PORT')
-DB_NAME = os.environ.get('DB_NAME')
-
-eng = create_engine(
-    f"{DB_PLATFORM}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
