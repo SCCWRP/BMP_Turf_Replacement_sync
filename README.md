@@ -1,1 +1,2 @@
-This is a test to see if this app gets added to Monte's tool
+# San Diego Turf Replacement Sync Scripts
+This is the repository for collecting Elizabeth's turf data off of teams and putting it in a database
