@@ -105,7 +105,7 @@ def fetch_survey123data(gis, surv_name, surv_key, cols = None):
     return df
 
 # Accepts rain data (should have column for sitename but only one site) and returns start and end of rain events conditioned on:
-# Start: Has rained more than 0.2 in in less than 2 hours
+# Start: Has rained more than 0.2 inches in less than 2 hours
 # End: Has not rained for more than 6 hours
 def get_rainevents(rain):
     rainevent = pd.DataFrame()

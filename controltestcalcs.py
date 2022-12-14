@@ -51,7 +51,7 @@ def sync_controltestcalcs(eng):
         prioravg1 = pd.read_sql(f"""
                                 WITH tbl_priorday AS (
                                     SELECT sensor, wvc_final AS result, "timestamp"
-                                    FROM tbl_watervolume
+                                    FROM tbl_watervolume_final
                                     WHERE ("timestamp" {priorday}) AND sensor IN {sensors_tup}
                                 )
                                 SELECT table1.sensor, priordayavg, priorday_n, priorhouravg, priorhour_n
@@ -84,7 +84,7 @@ def sync_controltestcalcs(eng):
         testmax = pd.read_sql(f"""
                                 WITH trunc_result AS (
                                     SELECT sensor, "timestamp", wvc_final AS result, wvcunit AS unit
-                                    FROM tbl_watervolume 
+                                    FROM tbl_watervolume_final
                                     WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
                                 )
                                 SELECT table1.sensor, maxresult, max_n, "timestamp", table1.unit
@@ -139,7 +139,7 @@ def sync_controltestcalcs(eng):
             else:
                 temp = pd.read_sql(f"""
                                 SELECT "timestamp"
-                                FROM tbl_watervolume
+                                FROM tbl_watervolume_final
                                 WHERE sensor = '{sensor}' AND "timestamp" > '{controltest_end}' AND wvc_final <= {priorhouravg}
                                 ORDER BY "timestamp"
                                 LIMIT 1

@@ -8,8 +8,8 @@ def create_views(eng):
     print("vw_watervolume")
     eng.execute(
         """
-            DROP MATERIALIZED VIEW IF EXISTS vw_watervolume;
-            CREATE MATERIALIZED VIEW vw_watervolume AS (
+            DROP VIEW IF EXISTS vw_watervolume;
+            CREATE VIEW vw_watervolume AS (
                 SELECT 
                     tbl_watervolume.origin_filename,
                     tbl_sensorid.sitename,

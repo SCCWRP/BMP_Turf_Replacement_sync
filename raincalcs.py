@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import json, os, sys
 
+
 from functions import get_rainevents, exception_handler
 
 @exception_handler
@@ -31,6 +32,9 @@ def sync_raincalcs(eng):
         print(sensors_tup)
 
         for event in rainevents.iterrows():
+            # event will be a tuple
+            # (0, event row #0 (a pandas Series))
+            # (1, event row #1 (a pandas Series))
             side_df = pd.DataFrame()
             priorhour = f"BETWEEN '{event[1].rainstart-timedelta(hours=1)}' AND '{event[1].rainstart}'"
             event_interval = f"BETWEEN '{event[1].rainstart}' AND '{event[1].rainend}'"
@@ -39,11 +43,11 @@ def sync_raincalcs(eng):
                                 SELECT
                                     sensor,
                                     AVG(wvc_final) AS priorhouravg,
-                                    unit AS priorhouravgunit,
+                                    wvcunit AS priorhouravgunit,
                                     COUNT(*) AS priorhour_n
-                                FROM tbl_watervolume
-                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup}  AND (ABS(wvc_final) < 1.01))
-                                GROUP BY sensor, unit
+                                FROM tbl_watervolume_final
+                                WHERE ("timestamp" {priorhour} AND sensor IN {sensors_tup} )
+                                GROUP BY sensor, wvcunit
                                     """, eng)
 
             # If database does not contain any readings for specified sensors, move on to next rain event.
@@ -61,7 +65,7 @@ def sync_raincalcs(eng):
             rainmax = pd.read_sql(f"""
                                     WITH trunc_result AS (
                                         SELECT sensor, "timestamp", wvc_final AS result
-                                        FROM tbl_watervolume 
+                                        FROM tbl_watervolume_final 
                                         WHERE ("timestamp" {event_interval} AND sensor IN {sensors_tup} AND (ABS(wvc_final) < 1.01) ) 
                                     )
                                     SELECT table1.sensor, maxresult, max_n, "timestamp"
@@ -113,14 +117,26 @@ def sync_raincalcs(eng):
             elapsedtime = []
             print("Finding time elapsed until results return to prior hour averages")
             for sensor, priorhouravg in prioravg1[['sensor','priorhouravg']].itertuples(index=False):
-                temp = pd.read_sql(f"""
-                                SELECT "timestamp"
-                                FROM tbl_watervolume
-                                WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND wvc_final <= {priorhouravg}
-                                ORDER BY "timestamp"
-                                LIMIT 1
-                                """, eng)
-                elapsedtime.append(round((temp.timestamp[0]-event[1].rainend).days*24+(temp.timestamp[0]-event[1].rainend).seconds/3600,3))
+                temp = pd.read_sql(
+                        f"""
+                            SELECT "timestamp"
+                            FROM tbl_watervolume_final
+                            WHERE sensor = '{sensor}' AND "timestamp" > '{event[1].rainend}' AND wvc_final <= {priorhouravg}
+                            ORDER BY "timestamp"
+                            LIMIT 1
+                        """, 
+                        eng
+                    ) \
+                    if not pd.isnull(priorhouravg) \
+                    else pd.DataFrame()
+                        
+                print("temp")
+                print(temp)
+                elapsedtime.append(
+                    round((temp.timestamp[0]-event[1].rainend).days*24+(temp.timestamp[0]-event[1].rainend).seconds/3600,3)
+                    if not temp.empty
+                    else pd.NA
+                )
             print(elapsedtime)
             side_df['elapsedtime'] = elapsedtime
             side_df['timeunits'] = ['hrs'] * len(sensors_tup)
@@ -137,6 +153,9 @@ def sync_raincalcs(eng):
     
     try:
         eng.execute("DROP VIEW IF EXISTS vw_rainevent;")
+        main_df['priorhour_n'] = main_df.priorhour_n.astype(int)
+        print("main_df.dtypes")
+        print(main_df.dtypes)
         main_df.to_sql(f"tbl_rainevent", eng, index=False, if_exists='replace')
         print(main_df)
         report.append(f"Rain event calculcations successfully loaded for")

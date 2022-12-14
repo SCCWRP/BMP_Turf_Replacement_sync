@@ -10,6 +10,7 @@ from survey123 import sync_survey123_multiple
 from raincalcs import sync_raincalcs
 from views import create_views
 from controltestcalcs import sync_controltestcalcs
+import numpy as np
 
 from arcgis.gis import GIS
 
@@ -21,6 +22,11 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DB_PORT = os.environ.get('DB_PORT')
 DB_NAME = os.environ.get('DB_NAME')
 
+
+
+import psycopg2
+from psycopg2.extensions import register_adapter, AsIs
+psycopg2.extensions.register_adapter(np.int64, psycopg2._psycopg.AsIs)
 eng = create_engine(
     f"{DB_PLATFORM}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
@@ -46,48 +52,48 @@ tables = {
 
 # sync rain data from February 2022 and later
 report = [
-    *sync_metadata(
-        username = os.environ.get('MS_USERNAME'),
-        password = os.environ.get('MS_PASSWORD'),
-        url = os.environ.get('SHAREPOINT_SITE_URL'),
-        teamname = 'SanDiegoCountyBMPMonitoring',
-        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-        filename = 'SDturf_DataFileIndex.xlsx',
-        tablename = 'tbl_datafileindex',
-        eng = eng
-    ),
-    *sync_metadata(
-        username = os.environ.get('MS_USERNAME'),
-        password = os.environ.get('MS_PASSWORD'),
-        url = os.environ.get('SHAREPOINT_SITE_URL'),
-        teamname = 'SanDiegoCountyBMPMonitoring',
-        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-        filename = 'Sensor_IDs.xlsx',
-        tablename = 'tbl_sensorid',
-        eng = eng
-    ),
-    *sync_metadata(
-        username = os.environ.get('MS_USERNAME'),
-        password = os.environ.get('MS_PASSWORD'),
-        url = os.environ.get('SHAREPOINT_SITE_URL'),
-        teamname = 'SanDiegoCountyBMPMonitoring',
-        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-        filename = 'lu_nearestraingauge.xlsx',
-        tablename = 'lu_nearestraingauge',
-        eng = eng
-    ),
-    *sync_rain(SITENAME = 'Roads Div I', START_DATE = '2022-02-01', eng = eng),
-    *sync_watervolume(
-        username = os.environ.get('MS_USERNAME'),
-        password = os.environ.get('MS_PASSWORD'),
-        url = os.environ.get('SHAREPOINT_SITE_URL'),
-        teamname = 'SanDiegoCountyBMPMonitoring',
-        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Raw'
-    ),
-    *sync_survey123_multiple(eng, gis, tables),
+    # *sync_metadata(
+    #     username = os.environ.get('MS_USERNAME'),
+    #     password = os.environ.get('MS_PASSWORD'),
+    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
+    #     teamname = 'SanDiegoCountyBMPMonitoring',
+    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+    #     filename = 'SDturf_DataFileIndex.xlsx',
+    #     tablename = 'tbl_datafileindex',
+    #     eng = eng
+    # ),
+    # *sync_metadata(
+    #     username = os.environ.get('MS_USERNAME'),
+    #     password = os.environ.get('MS_PASSWORD'),
+    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
+    #     teamname = 'SanDiegoCountyBMPMonitoring',
+    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+    #     filename = 'Sensor_IDs.xlsx',
+    #     tablename = 'tbl_sensorid',
+    #     eng = eng
+    # ),
+    # *sync_metadata(
+    #     username = os.environ.get('MS_USERNAME'),
+    #     password = os.environ.get('MS_PASSWORD'),
+    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
+    #     teamname = 'SanDiegoCountyBMPMonitoring',
+    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+    #     filename = 'lu_nearestraingauge.xlsx',
+    #     tablename = 'lu_nearestraingauge',
+    #     eng = eng
+    # ),
+    # *sync_rain(SITENAME = 'Roads Div I', START_DATE = '2022-02-01', eng = eng),
+    # *sync_watervolume(
+    #     username = os.environ.get('MS_USERNAME'),
+    #     password = os.environ.get('MS_PASSWORD'),
+    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
+    #     teamname = 'SanDiegoCountyBMPMonitoring',
+    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Raw'
+    # ),
+    # *sync_survey123_multiple(eng, gis, tables),
+    # *create_views(eng),
     *sync_raincalcs(eng),
-    *sync_controltestcalcs(eng),
-    *create_views(eng)
+    #*sync_controltestcalcs(eng),
 ]
 
 SEND_FROM = 'admin@checker.sccwrp.org'
