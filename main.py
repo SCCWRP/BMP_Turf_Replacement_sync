@@ -52,48 +52,48 @@ tables = {
 
 # sync rain data from February 2022 and later
 report = [
-    # *sync_metadata(
-    #     username = os.environ.get('MS_USERNAME'),
-    #     password = os.environ.get('MS_PASSWORD'),
-    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
-    #     teamname = 'SanDiegoCountyBMPMonitoring',
-    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-    #     filename = 'SDturf_DataFileIndex.xlsx',
-    #     tablename = 'tbl_datafileindex',
-    #     eng = eng
-    # ),
-    # *sync_metadata(
-    #     username = os.environ.get('MS_USERNAME'),
-    #     password = os.environ.get('MS_PASSWORD'),
-    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
-    #     teamname = 'SanDiegoCountyBMPMonitoring',
-    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-    #     filename = 'Sensor_IDs.xlsx',
-    #     tablename = 'tbl_sensorid',
-    #     eng = eng
-    # ),
-    # *sync_metadata(
-    #     username = os.environ.get('MS_USERNAME'),
-    #     password = os.environ.get('MS_PASSWORD'),
-    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
-    #     teamname = 'SanDiegoCountyBMPMonitoring',
-    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
-    #     filename = 'lu_nearestraingauge.xlsx',
-    #     tablename = 'lu_nearestraingauge',
-    #     eng = eng
-    # ),
-    # *sync_rain(SITENAME = 'Roads Div I', START_DATE = '2022-02-01', eng = eng),
-    # *sync_watervolume(
-    #     username = os.environ.get('MS_USERNAME'),
-    #     password = os.environ.get('MS_PASSWORD'),
-    #     url = os.environ.get('SHAREPOINT_SITE_URL'),
-    #     teamname = 'SanDiegoCountyBMPMonitoring',
-    #     sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Raw'
-    # ),
-    # *sync_survey123_multiple(eng, gis, tables),
-    # *create_views(eng),
+    *sync_metadata(
+        username = os.environ.get('MS_USERNAME'),
+        password = os.environ.get('MS_PASSWORD'),
+        url = os.environ.get('SHAREPOINT_SITE_URL'),
+        teamname = 'SanDiegoCountyBMPMonitoring',
+        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+        filename = 'SDturf_DataFileIndex.xlsx',
+        tablename = 'tbl_datafileindex',
+        eng = eng
+    ),
+    *sync_metadata(
+        username = os.environ.get('MS_USERNAME'),
+        password = os.environ.get('MS_PASSWORD'),
+        url = os.environ.get('SHAREPOINT_SITE_URL'),
+        teamname = 'SanDiegoCountyBMPMonitoring',
+        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+        filename = 'Sensor_IDs.xlsx',
+        tablename = 'tbl_sensorid',
+        eng = eng
+    ),
+    *sync_metadata(
+        username = os.environ.get('MS_USERNAME'),
+        password = os.environ.get('MS_PASSWORD'),
+        url = os.environ.get('SHAREPOINT_SITE_URL'),
+        teamname = 'SanDiegoCountyBMPMonitoring',
+        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Metadata',
+        filename = 'lu_nearestraingauge.xlsx',
+        tablename = 'lu_nearestraingauge',
+        eng = eng
+    ),
+    *sync_rain(SITENAME = 'Roads Div I', START_DATE = '2022-02-01', eng = eng),
+    *sync_watervolume(
+        username = os.environ.get('MS_USERNAME'),
+        password = os.environ.get('MS_PASSWORD'),
+        url = os.environ.get('SHAREPOINT_SITE_URL'),
+        teamname = 'SanDiegoCountyBMPMonitoring',
+        sitefolder = 'Shared%20Documents/Turf%20Replacement/Data/Raw'
+    ),
+    *sync_survey123_multiple(eng, gis, tables),
+    *create_views(eng),
     *sync_raincalcs(eng),
-    #*sync_controltestcalcs(eng),
+    *sync_controltestcalcs(eng)
 ]
 
 SEND_FROM = 'admin@checker.sccwrp.org'
