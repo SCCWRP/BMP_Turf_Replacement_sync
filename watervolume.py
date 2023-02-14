@@ -288,15 +288,13 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
     # Temporarliy disable for development
 
     print(f"Loading data to {tblname}")
-    exitcode = csv_to_db(os.environ.get("DB_HOST"), os.environ.get("DB_NAME"), os.environ.get("DB_USER"), tblname, alldata.columns, tmpcsvpath, overwrite = True)
-    print(f"Exit code {exitcode}")
-   
-    if exitcode == 0:
-        report.append(f"\tsuccessfully loaded {len(alldata)} rows to {tblname}")
-        # remove the clutter from tmp folder
-        os.remove(tmpcsvpath)
-    else:
-        report.append(f"\tError loading data to {tblname}. The CSV file attempted to load to the table is at {tmpcsvpath}")
+    result = csv_to_db(os.environ.get("DB_HOST"), os.environ.get("DB_NAME"), os.environ.get("DB_USER"), tblname, alldata.columns, tmpcsvpath, overwrite = True)
+    print(f"Exit code {result}")
+    
+    report.append(f"Attempt to load data to {tblname}")
+    report.append("Here is the result")
+    report.append(f"""\tSTDOUT: {result.get('out')}""")
+    report.append(f"""\tSTDERR: {result.get('err')}""")
     
     return report
 

@@ -1,4 +1,5 @@
 import pandas as pd
+import subprocess as sp
 import requests, os, inspect, traceback, re
 from io import StringIO
 from executing import Source # executing library depends on asttokens which must be installed separately
@@ -159,20 +160,28 @@ def send_mail(send_from, send_to, subject, text, filename=None, server="localhos
 
 
 def csv_to_db(DB_HOST, DB_NAME, DB_USER, tablename, columns, csvpath, overwrite = False):
+    out = ''
+    err = ''
     # This will ensure the data is copied with correct corresponding columns
     # psql can execute since it authenticates with PGPASSWORD environment variable
-    sqlcmd = f'psql -h {DB_HOST} -d {DB_NAME} -U {DB_USER} -c "DELETE FROM {tablename}";' if overwrite else ''
+    # sqlcmd = f'psql|-h|{DB_HOST}|-d|{DB_NAME}|-U|{DB_USER}|-c|"DELETE FROM {tablename}";'
+    delcmd = f'psql|-h|{DB_HOST}|-d|{DB_NAME}|-U|{DB_USER}|-c|DELETE FROM {tablename}'.split('|')
+    print(delcmd)
 
-    sqlcmd += (
-        f'psql -h {DB_HOST} -d {DB_NAME} -U {DB_USER} -c "\copy {tablename} ({",".join(columns)}) FROM \'{csvpath}\' csv\"'
-    )
-    print(sqlcmd)
+    # f'psql|-h|{DB_HOST}|-d|{DB_NAME}|-U|{DB_USER}|-c|"\copy {tablename} ({",".join(columns)}) FROM \'{csvpath}\' csv\"'
+    insertcmd = f'psql|-h|{DB_HOST}|-d|{DB_NAME}|-U|{DB_USER}|-c|\copy {tablename} ({",".join(columns)}) FROM \'{csvpath}\' csv'.split('|')
+    print(insertcmd)
     
-    # At least we can catch if it failed, and which datatype was the one that failed, which is a start
-    # we can email if the exitcode is non zero and include which datatype failed
-    # TODO capture some kind of error message (That's probably a low priority as it)
-    code = os.system(sqlcmd)
-    return code
+    if overwrite:
+        proc = sp.run(delcmd, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines = True)
+        out += proc.stdout
+        err += proc.stderr
+    
+    proc = sp.run(insertcmd, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines = True)
+    out += proc.stdout
+    err += proc.stderr
+
+    return { "out": out, "err": err }
 
 
 def exception_handler(func):
