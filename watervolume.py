@@ -7,7 +7,7 @@ import time
 
 import pandas as pd
 
-from functions import csv_to_db, exception_handler, permittivitycalc
+from functions import csv_to_db, exception_handler, permittivitycalc, calibration
 
 @exception_handler
 def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_file_extensions = ('dat')):
@@ -63,6 +63,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
         
         # if line 49 raises an error, the csv is not comma separated and it is possibly tab separated. 
         except AssertionError as e:
+            print("An error occurred")
             print(e)
             try:
                 f = StringIO(datastring)
@@ -120,7 +121,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
 
         # added in 3 columns for EC, PA, and K to be used later in a calculation if VWC is 7999
         dropcols = [
-            c for c in df.columns if not ( c in ('timestamp', 'battv') or 'm3/m3' in c or 'ds/m' in c or 'usec' in c or 'dper' in c)
+            c for c in df.columns if not ( c in ('timestamp', 'battv') or 'm3/m3' in c or 'ds/m' in c or 'usec' in c or 'dper' in c or 'vr' in c)
         ]
         df.drop(dropcols, axis = 'columns', inplace = True)
 
@@ -130,20 +131,29 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
 
 
         # get lists of columns for each variable to melt on later 
+        # wv is water volume
         wvcols = [
             c for c in df.columns if ( c in ('timestamp', 'battv') or 'm3/m3' in c)
         ]
 
+        # ec is electric conductivity
         eccols = [
             c for c in df.columns if ( c in ('timestamp', 'battv') or 'ds/m' in c)
         ]
 
+        # pa is .... ?
         pacols = [
             c for c in df.columns if ( c in ('timestamp', 'battv') or 'usec' in c)
         ]
 
+        # ka is .... ? (Dper)
         kacols = [
             c for c in df.columns if ( c in ('timestamp', 'battv') or 'dper' in c)
+        ]
+        
+        # vr is voltage ratio
+        vrcols = [
+            c for c in df.columns if ( c in ('timestamp', 'battv') or 'vr' in c)
         ]
 
         print(wvcols)
@@ -178,14 +188,20 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
         dfka = df[kacols].melt(id_vars = ['timestamp', 'battv'], var_name = 'sensor', value_name = 'ka_raw')
         dfka['kaunit'] = dfka.sensor.apply(lambda x: str(x).rsplit('_', 1)[-1] if str(x).count('_') > 0 else None)
         dfka.sensor = dfka.sensor.apply(lambda x: str(x).upper().rsplit('_', 1)[0][:-1] )
-        #dfka['sensor'] = dfka['sensor'].astype("category")
+        
+        # voltage ratio
+        dfvr = df[vrcols].melt(id_vars = ['timestamp', 'battv'], var_name = 'sensor', value_name = 'vr')
+        dfvr['vrunit'] = dfvr.sensor.apply(lambda x: str(x).rsplit('_', 1)[-1] if str(x).count('_') > 0 else None)
+        dfvr.sensor = dfvr.sensor.apply(lambda x: str(x).upper().rsplit('_', 1)[0][:-1] )
+        #dfvr['sensor'] = dfvr['sensor'].astype("category")
 
         # df_merge1 = pd.merge(dfwv, dfec, on = ['sensor','timestamp'])
         # df_merge2 = pd.merge(dfpa, dfka, on = ['timestamp','sensor'])
         # df = pd.merge(df_merge1, df_merge2, on = ['timestamp','sensor'])
         df = dfwv.merge(dfec, on = ['sensor','timestamp', 'battv'], how = 'inner') \
                 .merge(dfpa, on = ['sensor','timestamp', 'battv'], how = 'inner') \
-                .merge(dfka, on = ['sensor','timestamp', 'battv'], how = 'inner')
+                .merge(dfka, on = ['sensor','timestamp', 'battv'], how = 'inner') \
+                .merge(dfvr, on = ['sensor','timestamp', 'battv'], how = 'inner')
         
 
         # initialize other calculated fields that will assist with the QA process
@@ -235,6 +251,9 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
         df = pd.concat([df7999subset, dfrestsubset])
         print(df)
 
+        # apply Elizabeth's new calibration, to all records
+        df = df.apply(calibration, axis = 1)
+
         # tack on the file name and put it as the first column in the dataframe for aesthetic purposes
         metadatacols = {
             'origin_sharepointsite': folder.site_url,
@@ -258,7 +277,9 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
 
     # throw the data in the tmp folder
     tmpcsvpath = '/tmp/tmpwatervolume.csv'
+    print('writing data to the tmp folder')
     alldata.to_csv(tmpcsvpath, index = False, header = False)
+    print('Finished writing data to the tmp folder')
 
     tblname = 'tbl_watervolume'
     # NOTE overwrite = True argument may have to go away. We may only pull files that are not found in tbl_watervolume, or only files in the metadata table called "datafileindex"
@@ -277,7 +298,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
     else:
         report.append(f"\tError loading data to {tblname}. The CSV file attempted to load to the table is at {tmpcsvpath}")
     
-    return report, alldata
+    return report
 
 
 

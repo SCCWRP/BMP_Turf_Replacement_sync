@@ -81,26 +81,28 @@ def sync_controltestcalcs(eng):
 
         controltest_interval = f"BETWEEN '{test_info['timeirrigationon'][0]}' AND '{pd.Timestamp(datetime.combine(test_info['controltestdate'][0], test_info['controltest_endtime'][0])) + timedelta(days=1)}'"
         print("Finding maximum result during test for each sensor")
-        testmax = pd.read_sql(f"""
-                                WITH trunc_result AS (
-                                    SELECT sensor, "timestamp", wvc_final AS result, wvcunit AS unit
-                                    FROM tbl_watervolume_final
-                                    WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
-                                )
-                                SELECT table1.sensor, maxresult, max_n, "timestamp", table1.unit
-                                FROM (
-                                    SELECT
-                                        sensor,
-                                        MAX(result) AS maxresult,
-                                        COUNT(*) AS max_n,
-                                        unit
-                                    FROM trunc_result
-                                    GROUP BY sensor, unit
-                                ) AS table1 
-                                LEFT JOIN trunc_result
-                                ON table1.maxresult = trunc_result.result AND table1.sensor = trunc_result.sensor
-                                """, eng)
-        print(testmax)
+
+        if len(sensors_tup) > 0:
+            testmax = pd.read_sql(f"""
+                                    WITH trunc_result AS (
+                                        SELECT sensor, "timestamp", wvc_final AS result, wvcunit AS unit
+                                        FROM tbl_watervolume_final
+                                        WHERE ("timestamp" {controltest_interval} AND sensor IN {sensors_tup}) 
+                                    )
+                                    SELECT table1.sensor, maxresult, max_n, "timestamp", table1.unit
+                                    FROM (
+                                        SELECT
+                                            sensor,
+                                            MAX(result) AS maxresult,
+                                            COUNT(*) AS max_n,
+                                            unit
+                                        FROM trunc_result
+                                        GROUP BY sensor, unit
+                                    ) AS table1 
+                                    LEFT JOIN trunc_result
+                                    ON table1.maxresult = trunc_result.result AND table1.sensor = trunc_result.sensor
+                                    """, eng)
+            print(testmax)
         maxresult = []
         max_n = []
         maxtime = []
@@ -120,6 +122,7 @@ def sync_controltestcalcs(eng):
                 maxtime.append(pd.NA)
                 maxduration.append(pd.NA)
                 watervolumeunit.append(pd.NA)
+        
         main_df['maxresult'] = maxresult
         main_df['watervolumeunit'] = watervolumeunit
         main_df['maxtime'] = maxtime
