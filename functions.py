@@ -246,3 +246,34 @@ def permittivitycalc(row, lowKaconstant, highKaconstant, limitKaconstant):
         results['calculated'] = False
 
     return results
+
+
+
+def calibration(row):
+    results = row
+    
+    if (row['timestamp'] >= pd.Timestamp('2022-04-01 00:00:00')) and (row['timestamp'] < pd.Timestamp('2022-05-17 00:00:00')) and (row['sensor'].startswith('S1')):
+
+        EC = row['ec'] # Electric Conductivity
+        VR = row['vr'] # Voltage Ratio
+        
+        # not sure what KA stands for, but the units are Dper (and i dont know what that means either)
+        Dper = row['ka_final'] 
+
+        if VR >= 17:
+            return results
+
+        if EC > 0.8:
+            results['wvc_prelim_calc'] = (
+                (0.00003 * (Dper ** 3)) - (0.0025 * (Dper ** 2)) + (0.0675 * Dper) - 0.872
+            )
+        else:
+            results['wvc_prelim_calc'] = (0.001 + (0.53116 * EC)) ** 0.4418
+        
+        # for now just accept the value as final
+        results['wvc_calc'] = results['wvc_prelim_calc']
+        results['wvc_final'] = results['wvc_prelim_calc']
+    
+    
+    return results
+
