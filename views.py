@@ -24,7 +24,6 @@ def create_views(eng):
                     tbl_watervolume.wvc_prelim_calc::numeric,
                     tbl_watervolume.wvc_raw::numeric,
                     tbl_watervolume.wvcunit::character varying,
-                    tbl_watervolume.vr::numeric,
                     tbl_watervolume.ka_final::numeric,
                     tbl_watervolume.ka_calc::numeric,
                     tbl_watervolume.ka_raw::numeric,
@@ -37,7 +36,8 @@ def create_views(eng):
                     tbl_watervolume.highka::numeric,
                     tbl_watervolume.lowka::numeric,
                     tbl_watervolume.kalimit::numeric,
-                    tbl_watervolume.kalimit80pct::numeric
+                    tbl_watervolume.kalimit80pct::numeric,
+                    tbl_watervolume.vr::numeric
                 FROM (tbl_watervolume
                     LEFT JOIN tbl_sensorid ON (((tbl_watervolume.sensor)::text = tbl_sensorid.sensor)))
                 ORDER BY tbl_watervolume."timestamp", tbl_sensorid.sitename, tbl_sensorid.sensorsequencenumber, tbl_sensorid.sensorgroup, tbl_sensorid.sensor
