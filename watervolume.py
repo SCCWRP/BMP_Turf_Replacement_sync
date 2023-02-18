@@ -36,6 +36,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
 
     # We may possibly only grab files that are not found in the tbl_watervolume table, in which case we need to disable the overwrite argument in csv_to_db
 
+
     for i, file_ in enumerate(valid_files):
        
         filename = file_.get('Name')
@@ -252,6 +253,7 @@ def sync_watervolume(username, password, url, teamname, sitefolder, acceptable_f
         print(df)
 
         # apply Elizabeth's new calibration, to all records
+        print('''# apply Elizabeth's new calibration, to all records''')
         df = df.apply(calibration, axis = 1)
 
         # tack on the file name and put it as the first column in the dataframe for aesthetic purposes

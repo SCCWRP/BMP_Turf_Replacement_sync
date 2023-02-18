@@ -267,21 +267,24 @@ def calibration(row):
         VR = row['vr'] # Voltage Ratio
         
         # not sure what KA stands for, but the units are Dper (and i dont know what that means either)
-        Dper = row['ka_final'] 
-
-        if VR >= 17:
-            return results
+        Dper = row['ka_raw'] 
 
         if EC > 0.8:
-            results['wvc_prelim_calc'] = (
-                (0.00003 * (Dper ** 3)) - (0.0025 * (Dper ** 2)) + (0.0675 * Dper) - 0.872
-            )
-        else:
             results['wvc_prelim_calc'] = (0.001 + (0.53116 * EC)) ** 0.4418
+        else:
+            results['wvc_prelim_calc'] = (
+                (0.00003 * (Dper ** 3)) - (0.0025 * (Dper ** 2)) + (0.0675 * Dper) - 0.0872
+            )
         
-        # for now just accept the value as final
+        # no prelim calc with this method
         results['wvc_calc'] = results['wvc_prelim_calc']
-        results['wvc_final'] = results['wvc_prelim_calc']
+
+        if VR >= 17:
+            return results        
+        
+        # if VR < 17, the calculation applies
+        results['wvc_final'] = results['wvc_calc']
+        results['calculated'] = True
     
     
     return results
